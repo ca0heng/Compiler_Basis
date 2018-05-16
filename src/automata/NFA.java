@@ -15,25 +15,25 @@ public class NFA extends FA {
     }
 
 
-
-
-    public DFA getDFA() {
-
-    }
-
-
-    /**
-     * @return the set of NFA states reachable from NFA state s on epsilon-transitions alone.
-     */
-    private Vector<Integer> getEpsilonClosure(int s) {
-
-    }
-
-    /**
-     * @return the set of NFA states reachable from some NFA state s in set states
-     * on epsilon-transitions alone.
-     */
-    private Vector<Integer> getEpsilonClosure(Vector<Integer> states) {
-
-    }
+//
+//
+//    public DFA getDFA() {
+//
+//    }
+//
+//
+//    /**
+//     * @return the set of NFA states reachable from NFA state s on epsilon-transitions alone.
+//     */
+//    private Vector<Integer> getEpsilonClosure(int s) {
+//
+//    }
+//
+//    /**
+//     * @return the set of NFA states reachable from some NFA state s in set states
+//     * on epsilon-transitions alone.
+//     */
+//    private Vector<Integer> getEpsilonClosure(Vector<Integer> states) {
+//
+//    }
 }
