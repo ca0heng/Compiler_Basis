@@ -185,12 +185,70 @@ public class Grammar {
         this.parsingTable = parsingTable;
     }
 
-    public static void main(String[] args) {
-        Grammar grammar = new Grammar('E');
-        System.out.println();
+
+    /**
+     *
+     * @param input end with '$'
+     */
+    public void nonPredictiveParsing(String input) throws ParsingError{
+        // Initialize the stack.
+        Stack<Character> stack = new Stack<>();
+        stack.push('$');
+        stack.push(start);
+
+
+        char[] chars = input.toCharArray();
+        int idx = 0;
+        char a = chars[idx];
+        char x = stack.peek();
+        while (x != '$') {
+            if (x == a) {
+                stack.pop();
+                // Let a be the next symbol of input.
+                if (idx < chars.length-1)
+                    a = chars[++idx];
+            } else if (terminals.contains(x) && x != 'e') {
+                throw new ParsingError();
+            } else if (!parsingTable.containsKey(new Pair<>(x, a))) {
+                throw new ParsingError();
+            } else {
+                // Output the production.
+                Pair<Character, LinkedList<Character>> production = parsingTable.get(new Pair<>(x, a));
+                System.out.print(production.getLeft() + " ");
+                for (char c: production.getRight())
+                    System.out.print(c);
+                System.out.println();
+
+                stack.pop();
+                // Push the production onto the stack.
+                if (production.getRight().getFirst() != 'e') {
+                    for (int i = production.getRight().size()-1; i >= 0; i--) {
+                        stack.push(production.getRight().get(i));
+                    }
+                }
+            }
+            x = stack.peek();
+        }
+
     }
 
 
+    private class ParsingError extends Exception {
+
+    }
+
+
+    public static void main(String[] args) {
+        Grammar grammar = new Grammar('E');
+        try {
+            grammar.nonPredictiveParsing("i+i*i$");
+        } catch (ParsingError error) {
+            System.out.println("Error");
+        }
+
+        System.out.println();
+    }
+    
 }
 
 
