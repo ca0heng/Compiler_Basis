@@ -16,13 +16,14 @@ public class Grammar {
     private Vector<Pair<Character, LinkedList<Character>>> productions;
     private HashMap<Character, HashSet<Character>> firstSet;
     private HashMap<Character, HashSet<Character>> followSet;
-    private HashMap<Pair<Character, Character>, Pair<Character, LinkedList<Character>>> parsingTable;
+
 
     public Grammar(char start){
        terminals = new HashSet<>();
        nonterminals = new HashSet<>();
        productions = new Vector<>();
        this.start = start;
+
         // Loading from txt.
         String url = System.getProperty("user.dir") + "/src/ds/init-grammar";
         try {
@@ -37,7 +38,7 @@ public class Grammar {
                 for (char c: right) {
                     if (Character.isUpperCase(c) && !nonterminals.contains(c))
                         nonterminals.add(c);
-                    else if (!Character.isUpperCase(c))
+                    else if (!Character.isUpperCase(c) && c != 'e')
                         terminals.add(c);
                 }
 
@@ -55,9 +56,40 @@ public class Grammar {
         // Compute the firstSet and followSet for this grammar.
         setFirstSet();
         setFollowSet();
+//
+//        // Construct a predictive parsing table.
+//        constructParsingTable();
+    }
 
-        // Construct a predictive parsing table.
-        constructParsingTable();
+
+    public Vector<Pair<Character, LinkedList<Character>>> getProductions() {
+        return productions;
+    }
+
+
+    public HashSet<Character> getTerminals() {
+        return terminals;
+    }
+
+
+
+    public HashSet<Character> getNonTerminals() {
+        return nonterminals;
+    }
+
+
+    public HashMap<Character, HashSet<Character>> getFirstSet() {
+        return firstSet;
+    }
+
+
+    public HashMap<Character, HashSet<Character>> getFollowSet() {
+        return followSet;
+    }
+
+
+    public char getStart() {
+        return start;
     }
 
 
@@ -68,6 +100,10 @@ public class Grammar {
             firstSet.put(c, new HashSet<Character>());
         for (char c: terminals)
             firstSet.put(c, new HashSet<Character>());
+
+
+        firstSet.put('e', new HashSet<Character>());
+        firstSet.get('e').add('e');
 
         // Compute the firstSet of terminals.
         for (char c: terminals)
@@ -80,11 +116,16 @@ public class Grammar {
                 i += set.size();
 
             for (Pair<Character, LinkedList<Character>> production: productions) {
-                for (char c: production.getRight()) {
-                    HashSet<Character> firstOfC = firstSet.get(c);
-                    firstSet.get(production.getLeft()).addAll(firstOfC);
-                    if (!firstOfC.contains('e'))
-                        break;
+                // epsilon-production
+                if (production.getRight().getFirst() == 'e')
+                    firstSet.get(production.getLeft()).add('e');
+                else {
+                    for (char c: production.getRight()) {
+                        HashSet<Character> firstOfC = firstSet.get(c);
+                        firstSet.get(production.getLeft()).addAll(firstOfC);
+                        if (!firstOfC.contains('e'))
+                            break;
+                    }
                 }
             }
 
@@ -100,9 +141,10 @@ public class Grammar {
     /**
      * @return the firstSet for any string.
      */
-    private HashSet<Character> getFirstSetOfString(String str) {
+    public HashSet<Character> getFirstSetOfString(String str) {
         HashSet<Character> firstSetOfString = new HashSet<>();
         for (char c: str.toCharArray()) {
+
             HashSet<Character> set = firstSet.get(c);
             firstSetOfString.addAll(set);
             firstSetOfString.remove('e');
@@ -130,28 +172,31 @@ public class Grammar {
 
 
             for (Pair<Character, LinkedList<Character>> production: productions) {
-                LinkedList<Character> list = production.getRight();
+                LinkedList<Character> right = production.getRight();
 
-                for (int m = 0; m < list.size(); m++) {
-                    char a = list.get(m);
-                    if (nonterminals.contains(a)) {
+                for (int idx = 0; idx < right.size(); idx++) {
+                    char c = right.get(idx);
+                    if (nonterminals.contains(c)) {
                         try {
-                            char b = list.get(m+1);
-                            followSet.get(a).addAll(firstSet.get(b));
-                            followSet.get(a).remove('e');
+                            char nc = right.get(idx+1);
+                            followSet.get(c).addAll(firstSet.get(nc));
+                            followSet.get(c).remove('e');
+
 
                             String str = "";
-                            for (int n = m+1; n < list.size(); n++)
-                                str = str.concat(String.valueOf(list.get(n)));
+                            for (int j = idx+1; j < right.size(); j++) {
+                                str = str.concat(String.valueOf(right.get(j)));
+                            }
                             if (getFirstSetOfString(str).contains('e'))
-                                followSet.get(a).addAll(followSet.get(production.getLeft()));
-
-                        } catch (IndexOutOfBoundsException e) {
+                                followSet.get(c).addAll(followSet.get(production.getLeft()));
+                        } catch (IndexOutOfBoundsException ex) {
                             followSet.get(production.getLeft());
-                            followSet.get(a).addAll(followSet.get(production.getLeft()));
+                            followSet.get(c).addAll(followSet.get(production.getLeft()));
                         }
                     }
+
                 }
+
             }
 
 
@@ -165,90 +210,8 @@ public class Grammar {
     }
 
 
-    private void constructParsingTable() {
-        HashMap<Pair<Character, Character>, Pair<Character, LinkedList<Character>>> parsingTable = new HashMap<>();
-        for (Pair<Character, LinkedList<Character>> production: productions) {
-            String str = "";
-            for (char c: production.getRight())
-                str = str.concat(String.valueOf(c));
-            for (char c: getFirstSetOfString(str)) {
-                if (terminals.contains(c) && c != 'e')
-                    parsingTable.put(new Pair<>(production.getLeft(), c), production);
-            }
-
-            if (getFirstSetOfString(str).contains('e'))
-                for (char c: followSet.get(production.getLeft()))
-                    if (!nonterminals.contains(c))
-                        parsingTable.put(new Pair<>(production.getLeft(), c), production);
-
-        }
-        this.parsingTable = parsingTable;
-    }
 
 
-    /**
-     *
-     * @param input end with '$'
-     */
-    public void nonPredictiveParsing(String input) throws ParsingError{
-        // Initialize the stack.
-        Stack<Character> stack = new Stack<>();
-        stack.push('$');
-        stack.push(start);
-
-
-        char[] chars = input.toCharArray();
-        int idx = 0;
-        char a = chars[idx];
-        char x = stack.peek();
-        while (x != '$') {
-            if (x == a) {
-                stack.pop();
-                // Let a be the next symbol of input.
-                if (idx < chars.length-1)
-                    a = chars[++idx];
-            } else if (terminals.contains(x) && x != 'e') {
-                throw new ParsingError();
-            } else if (!parsingTable.containsKey(new Pair<>(x, a))) {
-                throw new ParsingError();
-            } else {
-                // Output the production.
-                Pair<Character, LinkedList<Character>> production = parsingTable.get(new Pair<>(x, a));
-                System.out.print(production.getLeft() + " ");
-                for (char c: production.getRight())
-                    System.out.print(c);
-                System.out.println();
-
-                stack.pop();
-                // Push the production onto the stack.
-                if (production.getRight().getFirst() != 'e') {
-                    for (int i = production.getRight().size()-1; i >= 0; i--) {
-                        stack.push(production.getRight().get(i));
-                    }
-                }
-            }
-            x = stack.peek();
-        }
-
-    }
-
-
-    private class ParsingError extends Exception {
-
-    }
-
-
-    public static void main(String[] args) {
-        Grammar grammar = new Grammar('E');
-        try {
-            grammar.nonPredictiveParsing("i+i*i$");
-        } catch (ParsingError error) {
-            System.out.println("Error");
-        }
-
-        System.out.println();
-    }
-    
 }
 
 
