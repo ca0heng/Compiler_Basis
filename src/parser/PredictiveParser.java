@@ -4,12 +4,11 @@ import ds.Grammar;
 import ds.Pair;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Stack;
 
 public class PredictiveParser {
     private Grammar grammar;
-    private HashMap<Pair<Character, Character>, Pair<Character, LinkedList<Character>>> parsingTable;
+    private HashMap<Pair<Character, Character>, Pair<Character, String>> parsingTable;
 
     public PredictiveParser(Grammar grammar) {
         this.grammar = grammar;
@@ -22,10 +21,10 @@ public class PredictiveParser {
      * Compilers, p224, Algorithm 4.31
       */
     private void constructParsingTable() {
-        HashMap<Pair<Character, Character>, Pair<Character, LinkedList<Character>>> parsingTable = new HashMap<>();
-        for (Pair<Character, LinkedList<Character>> production: grammar.getProductions()) {
+        HashMap<Pair<Character, Character>, Pair<Character, String>> parsingTable = new HashMap<>();
+        for (Pair<Character, String> production: grammar.getProductions()) {
             String str = "";
-            for (char c: production.getRight())
+            for (char c: production.getRight().toCharArray())
                 str = str.concat(String.valueOf(c));
 
             for (char c: grammar.getFirstSetOfString(str)) {
@@ -70,19 +69,15 @@ public class PredictiveParser {
                 throw new ParsingError();
             } else {
                 // output
-                Pair<Character, LinkedList<Character>> production = parsingTable.get(new Pair<>(x, a));
-                System.out.print(production.getLeft() + " ");
-                for (char c: production.getRight())
-                    System.out.print(c);
-                System.out.println();
-
+                Pair<Character, String> production = parsingTable.get(new Pair<>(x, a));
+                System.out.println(production.getLeft() + " " + production.getRight());
                 stack.pop();
 
 
                 // Push the production onto the stack.
-                if (production.getRight().getFirst() != 'e')
-                    for (int i = production.getRight().size() - 1; i >= 0; i--)
-                        stack.push(production.getRight().get(i));
+                if (production.getRight().toCharArray()[0] != 'e')
+                    for (int i = production.getRight().length() - 1; i >= 0; i--)
+                        stack.push(production.getRight().toCharArray()[i]);
 
             }
 
@@ -90,11 +85,12 @@ public class PredictiveParser {
         }
     }
 
-    private class ParsingError extends Exception { }
+
 
     public static void main(String[] args) throws ParsingError {
         PredictiveParser parser = new PredictiveParser(new Grammar('E'));
         parser.parsing("i+i*i$");
+
     }
 }
 

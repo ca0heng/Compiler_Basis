@@ -13,7 +13,7 @@ public class Grammar {
     private HashSet<Character> terminals;
     private HashSet<Character>  nonterminals;
     private char start;
-    private Vector<Pair<Character, LinkedList<Character>>> productions;
+    private Vector<Pair<Character, String>> productions;
     private HashMap<Character, HashSet<Character>> firstSet;
     private HashMap<Character, HashSet<Character>> followSet;
 
@@ -25,28 +25,25 @@ public class Grammar {
        this.start = start;
 
         // Loading from txt.
-        String url = System.getProperty("user.dir") + "/src/ds/init-grammar";
+        String url = System.getProperty("user.dir") + "/src/ds/config.txt";
         try {
             Scanner scanner = new Scanner(new FileInputStream(url));
             while (scanner.hasNextLine()) {
                 String[] ss = scanner.nextLine().split(" ");
                 char left = ss[0].charAt(0);
-                char[] right = ss[1].toCharArray();
+
 
                 // Initialize the non-terminals and terminals.
                 nonterminals.add(left);
-                for (char c: right) {
-                    if (Character.isUpperCase(c) && !nonterminals.contains(c))
+                for (char c: ss[1].toCharArray()) {
+                    if (Character.isUpperCase(c))
                         nonterminals.add(c);
                     else if (!Character.isUpperCase(c) && c != 'e')
                         terminals.add(c);
                 }
 
                 // Construct the production.
-                LinkedList<Character> list = new LinkedList<>();
-                for (char c: right)
-                    list.add(c);
-                Pair<Character, LinkedList<Character>> production = new Pair<>(left, list);
+                Pair<Character, String> production = new Pair<>(left, ss[1]);
                 productions.add(production);
             }
         } catch (IOException e) {
@@ -56,16 +53,13 @@ public class Grammar {
         // Compute the firstSet and followSet for this grammar.
         setFirstSet();
         setFollowSet();
-//
-//        // Construct a predictive parsing table.
-//        constructParsingTable();
+
     }
 
 
-    public Vector<Pair<Character, LinkedList<Character>>> getProductions() {
+    public Vector<Pair<Character, String>> getProductions() {
         return productions;
     }
-
 
     public HashSet<Character> getTerminals() {
         return terminals;
@@ -115,12 +109,12 @@ public class Grammar {
             for (HashSet<Character> set: firstSet.values())
                 i += set.size();
 
-            for (Pair<Character, LinkedList<Character>> production: productions) {
+            for (Pair<Character, String> production: productions) {
                 // epsilon-production
-                if (production.getRight().getFirst() == 'e')
+                if (production.getRight().toCharArray()[0] == 'e')
                     firstSet.get(production.getLeft()).add('e');
                 else {
-                    for (char c: production.getRight()) {
+                    for (char c: production.getRight().toCharArray()) {
                         HashSet<Character> firstOfC = firstSet.get(c);
                         firstSet.get(production.getLeft()).addAll(firstOfC);
                         if (!firstOfC.contains('e'))
@@ -137,6 +131,7 @@ public class Grammar {
         }
         this.firstSet = firstSet;
     }
+
 
     /**
      * @return the firstSet for any string.
@@ -171,21 +166,22 @@ public class Grammar {
                 i += set.size();
 
 
-            for (Pair<Character, LinkedList<Character>> production: productions) {
-                LinkedList<Character> right = production.getRight();
+            for (Pair<Character, String> production: productions) {
+                char[] right = production.getRight().toCharArray();
 
-                for (int idx = 0; idx < right.size(); idx++) {
-                    char c = right.get(idx);
+                for (int idx = 0; idx < right.length; idx++) {
+                    char c = right[idx];
                     if (nonterminals.contains(c)) {
                         try {
-                            char nc = right.get(idx+1);
+                            char nc = right[idx+1];
                             followSet.get(c).addAll(firstSet.get(nc));
                             followSet.get(c).remove('e');
 
 
+
                             String str = "";
-                            for (int j = idx+1; j < right.size(); j++) {
-                                str = str.concat(String.valueOf(right.get(j)));
+                            for (int j = idx+1; j < right.length; j++) {
+                                str = str.concat(String.valueOf(right[j]));
                             }
                             if (getFirstSetOfString(str).contains('e'))
                                 followSet.get(c).addAll(followSet.get(production.getLeft()));
@@ -210,8 +206,58 @@ public class Grammar {
     }
 
 
+    public boolean isLL1() {
+        for (char c: nonterminals) {
+            // two distinct productions
+            Vector<Pair<Character, String>> vector = new Vector<>();
+            for (Pair<Character, String> production: productions) {
+                if (production.getLeft() == c)
+                    vector.add(production);
+            }
+            if (vector.size() == 2) {
+                // Condition 1
+                String str1 = vector.get(0).getRight();
+                String str2 = vector.get(1).getRight();
+                HashSet<Character> firstOfStr1 = getFirstSetOfString(str1);
+                HashSet<Character> firstOfStr2 = getFirstSetOfString(str2);
+                if (!Collections.disjoint(firstOfStr1, firstOfStr2)) {
+                    return false;
+                }
+                // Condition 2
+                if (firstOfStr1.contains('e') && !Collections.disjoint(followSet.get(c), firstOfStr2))
+                    return false;
+                if (firstOfStr2.contains('e') && !Collections.disjoint(followSet.get(c), firstOfStr1))
+                    return false;
+            }
+        }
+
+        return true;
+    }
 
 
+
+
+    /**
+     * Compilers p213, Algorithm 4.19, Eliminating left recursion
+     * Input grammar G with no cycles or epsilon-productions.
+     */
+    public void eliminateLeftRecursion() {
+
+    }
+
+
+    /**
+     * Compilers p214, Algorithm 4.21, Left factoring a grammar
+     */
+    public void leftFactor() {
+
+    }
+
+
+    public static void main(String[] args) {
+        Grammar grammar = new Grammar('S');
+        System.out.println(grammar.isLL1());
+    }
 }
 
 

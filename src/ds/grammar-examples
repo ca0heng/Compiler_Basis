@@ -1,0 +1,19 @@
+Compilers p193 Grammar 4.1
+E E+T
+E T
+T T*F
+T F
+F (E)
+F i
+
+Compilers p193 Grammar 4.2
+E TX
+X +TX
+X e
+T FY
+Y *FY
+Y e
+F (E)
+F i
+
+

@@ -1,6 +1,5 @@
 package automata;
 
-
 import ds.Pair;
 import java.util.HashMap;
 
@@ -9,6 +8,7 @@ import java.util.HashMap;
  */
 public class DFA extends FA{
     private HashMap<Pair<Integer, Character>, Integer> transition;
+
 
     public DFA() {
         super();
